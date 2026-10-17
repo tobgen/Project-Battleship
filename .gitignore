@@ -1,0 +1,3 @@
+# Build outputs (see Makefile)
+*.o
+/battleship
