@@ -1,226 +1,229 @@
-# Battleship – sänka skepp i terminalen
+# Battleship – terminal multiplayer
 
-Sänka skepp för Linux-terminalen, enbart tangentbord (ncurses), gjort för att
-barn ska kunna spela mot varandra på en LAN-kväll. En statisk binär innehåller
-både servern (med en ncurses-adminkonsol och topplista) och klienten.
-Gränssnittet är på svenska som standard; `--lang en` ger engelska.
+Keyboard-only Battleship for the Linux terminal (ncurses), made for kids
+playing each other at a LAN evening. One static binary contains both the
+server (with an ncurses admin console and a leaderboard) and the client.
+The UI is Swedish by default; `--lang en` switches to English.
 
-English version: [README.en.md](README.en.md)
+Svensk version: [README.sv.md](README.sv.md)
 
-## Bygga
+## Build
 
     make
     ./battleship --version      # battleship 1.0.2 (git-rev, built 2026-10-17T15:05:00Z)
 
-Versionsnumret står i filen `VERSION`; git-revision och byggtid stämplas in
-vid `make` och visas även uppe till höger i klient och konsol.
+The version number lives in the `VERSION` file; the git revision and build
+time are stamped in at `make` and also shown top right in client and console.
 
-Ger `./battleship`, statiskt länkad (glibc + ncursesw + tinfo), strippad,
-cirka 1,3 MB. Kopiera den till valfri x86-64-Linux och kör. Enda
-körtidsberoendet är en terminfo-databas (`/usr/share/terminfo` eller
-`/lib/terminfo`), som alla normala Linux-installationer har.
+Produces `./battleship`, statically linked (glibc + ncursesw + tinfo), stripped,
+about 1.3 MB. Copy it to any x86-64 Linux box and run it. The only runtime
+dependency is a terminfo database (`/usr/share/terminfo` or `/lib/terminfo`),
+which every normal Linux install has.
 
-Byggkrav på byggmaskinen: `gcc`, `make`, `libncurses-dev`.
+Build requirements on the build machine: `gcc`, `make`, `libncurses-dev`.
 
 ## Server
 
-    ./battleship server [--port N] [--seats N] [--leaderboard FIL] [--grace S] [--headless] [--autopair [2|3]] [--lang sv|en]
+    ./battleship server [--port N] [--seats N] [--leaderboard FILE] [--grace S] [--headless] [--autopair [2|3]] [--lang sv|en]
 
-- `--port`         TCP-port, standard 4242
-- `--seats`        antal fasta platser, standard 10 (max 32)
-- `--leaderboard`  fil där topplistan sparas, standard `battleship-leaderboard.txt` i aktuell katalog
-- `--grace`        sekunder en spelare som tappat anslutningen får komma tillbaka innan matchen bryts, standard 90
-- `--show-misses`  trekamp: visa även andras bommar från start (standard: bara träffar)
-- `--paused`       starta pausad (samma som att trycka `P` direkt); `kill -USR1 <pid>` växlar paus utifrån
-- `--headless`     ingen konsol, logg till stdout (används automatiskt när stdin inte är en tty)
-- `--autopair`     para väntande platser automatiskt i platsordning, två eller tre åt gången (när ingen admin finns)
-- `--lang`         `sv` (standard) eller `en`; kan också sättas med miljövariabeln `BATTLESHIP_LANG`
+- `--port`         TCP port, default 4242
+- `--seats`        number of fixed seats, default 10 (max 32)
+- `--leaderboard`  file the leaderboard is saved to, default `battleship-leaderboard.txt` in the current directory
+- `--grace`        seconds a player who lost the connection may come back before the game is aborted, default 90
+- `--show-misses`  three-way: also show others' misses from the start (default: hits only)
+- `--paused`       start paused (same as pressing `P` right away); `kill -USR1 <pid>` toggles pause from outside
+- `--headless`     no console, log to stdout (also used automatically when stdin is not a tty)
+- `--autopair`     pair waiting seats automatically in seat order, two or three at a time (useful without an admin)
+- `--lang`         `sv` (default) or `en`; the `BATTLESHIP_LANG` environment variable works too
 
-### Adminkonsolen
+### Admin console
 
-Servern visar en tabell över alla platser (klient-id, spelarens namn, status,
-match, vinster/förluster denna session), pågående matcher och topplistan.
-`Tab` växlar fokus mellan platstabellen och topplistan.
+The server shows a table of all seats (client id, player name, state, match,
+wins/losses this session), the live matches and the leaderboard. `Tab` moves
+focus between the seat table and the leaderboard.
 
-Fokus på platser:
+Seat focus:
 
-| Tangent       | Åtgärd                                                   |
-|---------------|----------------------------------------------------------|
-| Upp/Ner, j/k  | flytta markören                                          |
-| Mellanslag    | markera/avmarkera platsen under markören (max tre)       |
-| p eller Enter | para de markerade platserna: två = vanlig match, tre = trekamp |
-| u             | bryt matchen för platsen under markören                  |
-| r             | starta om pågående match (tomma bräden, ingen poäng)     |
-| m             | trekamp: visa/dölj andras bommar (standard dolda)        |
-| P             | paus på/av: avslutade matcher väntar på nästa omgång och autoparning stannar; manuell parning fungerar fortfarande |
-| e             | byt namn på spelaren vid platsen (skickas till klienten) |
-| x             | sparka platsen under markören                            |
-| Tab           | gå till topplistan                                       |
-| q             | stäng servern                                            |
+| Key           | Action                                                 |
+|---------------|--------------------------------------------------------|
+| Up/Down, j/k  | move the cursor                                        |
+| Space         | mark/unmark the seat under the cursor (max three)      |
+| p or Enter    | pair the marked seats: two = normal game, three = three-way |
+| u             | abort the match of the seat under the cursor           |
+| r             | restart the current game (empty boards, no score)      |
+| m             | three-way: show/hide others' misses (default hidden)   |
+| P             | pause on/off: finished games wait for the next round and auto-pairing stops; manual pairing still works |
+| e             | rename the player at the seat (pushed to the client)   |
+| x             | kick the seat under the cursor                         |
+| Tab           | go to the leaderboard                                  |
+| q             | shut down the server                                   |
 
-Fokus på topplistan:
+Leaderboard focus:
 
-| Tangent       | Åtgärd                                                   |
-|---------------|----------------------------------------------------------|
-| Upp/Ner, j/k  | flytta markören                                          |
-| e eller Enter | byt namn på raden; finns namnet redan slås raderna ihop  |
-| d             | ta bort raden                                            |
-| R             | läs om topplistefilen från disk                          |
-| Tab           | tillbaka till platserna                                  |
+| Key           | Action                                                 |
+|---------------|--------------------------------------------------------|
+| Up/Down, j/k  | move the cursor                                        |
+| e or Enter    | rename the row; if the name exists the rows are merged |
+| d             | delete the row                                         |
+| R             | reload the leaderboard file from disk                  |
+| Tab           | back to the seats                                      |
 
-Endast platser med status `lobby` kan paras. **Ett par förblir ihop:** när en
-match är slut startar nästa match mellan samma två spelare automatiskt
-(förloraren är först), utom när servern är pausad (`P`): då ligger
-resultatet kvar hos spelarna tills ledaren trycker `P` igen, och alla
-väntande omgångar startar. Paret bryts bara när admin trycker `u`, eller när en av
-spelarna kopplar ner. Då hamnar spelarna i lobbyn igen och kan paras om.
+Only seats in the `lobby` state can be paired. **A pair stays together:** when
+a game ends, the next game between the same two players starts automatically
+(the loser opens), except while the server is paused (`P`): then the result
+stays on the players' screens until the leader presses `P` again, and all
+waiting rounds start. The pair is only broken when the admin presses `u` or one
+of the players disconnects; the players then return to the lobby and can be
+paired again.
 
-### Trekamp (tre spelare)
+### Three-way games (three players)
 
-Paras tre platser startar en trekamp. Turen går runt A → B → C; varje skott
-riktas mot valfri motståndare. På skärmen ligger de två fiendernas rutnät
-sida vid sida överst, den egna flottan under. `Tab` byter mål, och siktet
-hoppar också över till det andra rutnätet när man kör ut över kanten. Målets
-rubrik är markerad. Varje fiendebräde är ett enda bräde: träffar som den andra
-motståndaren gör syns också. Dennes bommar är dolda som standard (ledaren kan
-visa dem med `m`). Du får alltid skjuta på en ruta där någon annan bommat;
-det blir då en bom för dig också. Den vars flotta sänks är utslagen men ser resten av matchen;
-sista flottan som flyter vinner (en vinst, två förluster i topplistan).
-Lämnar en spelare en pågående trekamp spelar de två andra vidare, och nästa
-omgång blir en vanlig match mellan dem.
+Pairing three seats starts a three-way game. Turns go round A → B → C; each
+shot is aimed at an enemy of your choice. The two enemy grids sit side by side
+at the top, your own fleet below. `Tab` switches target, and the crosshair also
+jumps to the other grid when you run off the edge. The target's title is
+highlighted. Each enemy board is one board: hits the other attacker scores
+show up too. Their misses are hidden by default (the leader can show them
+with `m`). You may always fire at a cell someone else missed; it then counts
+as a miss for you too. A player whose
+fleet is sunk is out but watches the rest; the last fleet afloat wins (one
+win, two losses on the leaderboard). If a player leaves a three-way game in
+progress the other two play on, and the next round is a normal game between
+them.
 
-### Tappad anslutning
+### Lost connections
 
-Om en klient försvinner mitt i en match (kabel, laptop som somnar, fönster som
-stängs) håller servern platsen i `--grace` sekunder. Klienten försöker själv
-ansluta igen varannan sekund, och när den kommer tillbaka med samma klient-id
-får den hela matchläget tillbaka (flotta, skott åt båda håll, vems tur) och
-spelet fortsätter. Motståndaren ser "väntar på att hen kommer tillbaka" under
-tiden. Kommer spelaren inte tillbaka i tid bryts matchen och motståndaren
-hamnar i lobbyn. I konsolen visas en sådan plats som `borta 12s`.
+If a client vanishes mid-game (cable, laptop going to sleep, window closed)
+the server holds the seat for `--grace` seconds. The client retries every two
+seconds on its own, and when it comes back with the same client id it gets the
+whole game state back (fleet, shots both ways, whose turn) and play continues.
+The opponent sees "waiting for them to come back" meanwhile. If the player
+does not return in time the game is aborted and the opponent goes to the
+lobby. The console shows such a seat as `away 12s`.
 
-Samma klient-id räknas alltid som samma spelare: ansluter en klient medan den
-gamla anslutningen fortfarande ser levande ut (utdragen kabel ger ingen
-signal) tar den nya över platsen, och den gamla får beskedet och slutar
-försöka. Standard-id:t är datornamn plus terminal (t.ex. `pc-pts3`), så flera
-klienter på samma dator får olika id; sätt annars ett unikt `--id`.
+The same client id always means the same player: if a client connects while
+the old connection still looks alive (a pulled cable gives no signal), the new
+one takes over the seat and the old one is told and stops retrying. The
+default id is hostname plus terminal (e.g. `pc-pts3`), so several clients on
+one machine get different ids; otherwise set a unique `--id`.
 
-### Topplistan
+### Leaderboard
 
-Topplistan räknar vinster, förluster och träffsäkerhet (träffar/skott, alla
-tider) per spelarnamn (skiftlägesokänsligt, även för åäö) och överlever omstarter: den skrivs till `--leaderboard`-filen
-efter varje match och läses in när servern startar. Topp tio skickas till alla
-klienter så att barnen ser den i lobbyn.
+The leaderboard counts wins, losses and hit ratio (hits/shots, all time) per
+player name (case-insensitive, including åäö) and survives restarts: it is written to the `--leaderboard`
+file after every game and loaded when the server starts. The top ten is sent
+to every client so the kids see it in the lobby.
 
-Under topplistan visas **Träffsäkerhet ikväll**: träffprocent sedan servern
-startades, sorterad efter procent med antal `(träffar/skott)` så att små
-underlag syns. Den uppdateras efter varje skott och nollställs när servern
-startas om. Varje spelare ser dessutom sin egen träffprocent i pågående match
-bredvid fiendens skeppsrad (`Träffar 5/12 (42%)`).
+Under the leaderboard is **Hit ratio tonight**: hit percentage since the server
+started, sorted by percentage with `(hits/shots)` so small samples are obvious.
+It updates after every shot and resets when the server restarts. Each player
+also sees their own ratio for the current game next to the enemy ship bar
+(`Hits 5/12 (42%)`).
 
-Filen är vanlig text med huvudet `# v2`, en rad per spelare:
-`vinster<TAB>förluster<TAB>träffar<TAB>skott<TAB>namn`. Äldre filer utan
-träffar/skott läses in och uppgraderas vid nästa sparning.
-Den kan redigeras för hand med servern stoppad, eller med servern igång följt
-av `R` i konsolen. Rader med samma namn slås ihop vid inläsning.
+The file is plain text with a `# v2` header, one line per player:
+`wins<TAB>losses<TAB>hits<TAB>shots<TAB>name`. Older files without hits/shots
+are read and upgraded on the next save. It
+can be edited by hand with the server stopped, or while running followed by
+`R` in the console. Lines with the same name are merged on load.
 
-## Klient
+## Client
 
-    ./battleship client <värd> [--id ID] [--port N] [--seat N] [--lang sv|en] [--cell 1-3] [--logo] [--sound] [--flash]
-    ./battleship client --test        # mot en robot
-    ./battleship client --test3       # trekamp mot två robotar
+    ./battleship client <host> [--id ID] [--port N] [--seat N] [--lang sv|en] [--cell 1-3] [--logo] [--sound] [--flash]
+    ./battleship client --test        # against one robot
+    ./battleship client --test3       # three-way against two robots
 
-- `värd`      serverns IPv4-adress (eller `localhost`)
-- `--id`      klient-id som admin ser i konsolen, t.ex. `dator-3` (standard: datornamn+terminal; `A-Z a-z 0-9 _ -`, max 15). `--client` är samma sak.
-- `--name`    förifyllt spelarnamn; utan den får spelaren skriva sitt namn vid start
-- `--port`    serverport, standard 4242
-- `--seat`    begär en viss plats; utan den får du första lediga
-- `--lang`    `sv` (standard) eller `en`
-- `--cell`    rutstorlek i rader (bredd = dubbla); utan den väljs största som får plats
-- `--logo`    visa en stor SCOUT-banner under topplistan
-- `--sound`   pip när det blir din tur
-- `--flash`   blinka skärmen när det blir din tur
-- `--test`    testläge: startar en lokal server och en robotmotståndare i bakgrunden så att
-              hela flödet (namn, placering, strid, nästa match, topplista) kan provas på en
-              enda dator. Topplistan i testläget är tillfällig och tas bort vid avslut.
+- `host`      IPv4 address of the server (or `localhost`)
+- `--id`      client id the admin sees in the console, e.g. `pc-3` (default: hostname+terminal; `A-Z a-z 0-9 _ -`, max 15). `--client` is the same.
+- `--name`    preset player name; without it the player types a name at startup
+- `--port`    server port, default 4242
+- `--seat`    request a specific seat; without it you get the first free seat
+- `--lang`    `sv` (default) or `en`
+- `--cell`    cell size in rows (width is double); without it the largest that fits is used
+- `--logo`    show a big SCOUT banner under the leaderboard
+- `--sound`   beep when it becomes your turn
+- `--flash`   flash the screen when it becomes your turn
+- `--test`    test mode: starts a local server and a robot opponent in the background so the
+              whole flow (name, placement, battle, next game, leaderboard) can be tried on a
+              single machine. The test-mode leaderboard is temporary and removed on exit.
 
-Vid start frågar klienten **Vad heter du?** Spelaren skriver sitt namn (åäö och
-mellanslag går bra, max 24 byte) och trycker Enter. Efter varje match, när man
-trycker Enter för nästa, frågar klienten **Vem spelar nästa match?** med tomt
-fält: den som ska spela måste skriva sitt namn innan nästa match startar. I
-lobbyn och under placeringen byter `n` namn. Namnet är det som visas för
-motståndaren och räknas i topplistan; klient-id:t är bara för admin.
+At startup the client asks **What is your name?** The player types a name
+(åäö and spaces are fine, max 24 bytes) and presses Enter. After every game,
+when Enter is pressed for the next one, the client asks **Who plays the next
+game?** with an empty field: whoever is playing has to type their name before
+the next game starts. In the lobby and during placement `n` changes the name.
+The name is what the opponent sees and what the leaderboard counts; the client
+id is only for the admin.
 
-Skärmen visar fiendens vatten överst och din egen flotta under, med topplistan
-till höger om det finns plats (och SCOUT-bannern under den med `--logo`). Vatten ritas som `≈`, skepp som `█`, träff som
-`╳` och bom som `○`. Med en terminal på minst 55 rader blir varje ruta 2x4
-tecken (ser kvadratisk ut), annars 1x2. Minsta terminal: 36 rader x 25
-kolumner; ca 90 kolumner rekommenderas. Kräver UTF-8-terminal.
+The screen shows enemy waters on top and your own fleet below, with the
+leaderboard to the right when there is room (and the SCOUT banner under it with `--logo`). Water is drawn as `≈`, ships as
+`█`, hits as `╳` and misses as `○`. With a terminal of at least 55 rows each
+cell is 2x4 characters (looks square), otherwise 1x2. Minimum terminal: 36
+rows x 25 columns; about 90 columns recommended. Requires a UTF-8 terminal.
 
-### Tangenter
+### Keys
 
-Tangenterna är skiftlägesokänsliga (Caps Lock spelar ingen roll), och
-Mellanslag och Enter gör samma sak under spelet.
+Keys are case-insensitive (Caps Lock does not matter), and Space and Enter
+do the same thing during play.
 
-Placeringsfas (efter att admin parat dig):
+Placement phase (after the admin pairs you):
 
-| Tangent          | Åtgärd                                  |
+| Key              | Action                                  |
 |------------------|-----------------------------------------|
-| Pilar / hjkl     | flytta skeppet                          |
-| r                | rotera                                  |
-| Mellanslag/Enter | placera skeppet                         |
-| Backsteg         | ångra senast placerade skepp            |
-| a                | auto-placera resterande skepp           |
-| n                | byt namn                                |
+| Arrows / hjkl    | move the ship ghost                     |
+| r                | rotate                                  |
+| Space/Enter      | place the ship                          |
+| Backspace        | undo the last placed ship               |
+| a                | auto-place the remaining ships          |
+| n                | change name                             |
 
-Nästa skepp dyker upp på en ledig, giltig plats, och skeppet hålls alltid
-innanför brädet när man flyttar eller roterar.
+The next ship appears on a free, valid spot, and the ship is always kept
+inside the board when moving or rotating.
 
-Stridsfas:
+Battle phase:
 
-| Tangent             | Åtgärd                                  |
-|---------------------|-----------------------------------------|
-| Pilar / hjkl        | flytta siktet på fiendens rutnät        |
-| Mellanslag / Enter  | skjut                                   |
+| Key              | Action                                  |
+|------------------|-----------------------------------------|
+| Arrows / hjkl    | move the crosshair on the enemy grid    |
+| Space / Enter    | fire                                    |
 
-Siktet är ett svart block på klargul botten när det är din tur och vitt på
-mörkgrått medan motståndaren skjuter; statusraden är grön på din tur och
-mörkgrå medan du väntar. Färgerna är fasta (xterm-palettens 256 färger) och
-följer inte terminalens tema. Med `--sound`
-och/eller `--flash` piper respektive blinkar klienten dessutom när turen blir
-din (av som standard).
+The crosshair is a black block on bright yellow on your turn and white on
+dark grey while the opponent fires; the status bar is green on your turn and
+dark grey while waiting. Colours are fixed (the xterm 256-colour palette) and
+do not follow the terminal theme. With
+`--sound` and/or `--flash` the client also beeps or flashes when the turn
+becomes yours (off by default).
 
-Felsökning: `BATTLESHIP_DEBUG=/tmp/bs.log ./battleship client ...` skriver alla
-meddelanden från servern till filen.
+Troubleshooting: `BATTLESHIP_DEBUG=/tmp/bs.log ./battleship client ...` writes
+every message from the server to that file.
 
-Efter matchen ligger slutställningen kvar på skärmen; `Enter` går vidare via
-namnfrågan till placering inför nästa match mot samma motståndare. Klienten
-har ingen avsluta-tangent (barnen ska inte råka stänga den); ledaren avslutar
-med `Ctrl+C`, som stänger ner snyggt.
+After a game the final boards stay on screen; `Enter` goes via the name
+question to placement for the next game against the same opponent. The client
+has no quit key (so the kids cannot close it by accident); a leader quits with
+`Ctrl+C`, which shuts down cleanly.
 
-Flotta: Hangarfartyg 5, Slagskepp 4, Kryssare 3, Ubåt 3, Jagare 2. Skepp får
-inte röra varandra, inte ens diagonalt; det måste finnas minst en ruta vatten
-emellan. Regeln gäller manuell placering, auto-placering och kontrolleras även
-av servern. Turen växlar efter varje skott. Den som först sänker alla fem
-skepp vinner.
+Fleet: Carrier 5, Battleship 4, Cruiser 3, Submarine 3, Destroyer 2. Ships may
+not touch each other, not even diagonally; there must be at least one cell of
+water between them. This applies to manual placement, auto-placement and is
+also enforced by the server. Turns alternate after every shot. First player
+to sink all five ships wins.
 
-## Projektorvy
+## Projector view
 
-    ./battleship board <värd> [--port N] [--logo] [--lang sv|en]
+    ./battleship board <host> [--port N] [--logo] [--lang sv|en]
 
-En läs-vy för en projektor eller stor skärm: topplistan, pågående matcher
-(vem möter vem, vem skjuter, antal skott) och de senaste resultaten. Ansluter
-om automatiskt om servern startas om. Avsluta med `Ctrl+C`.
+A read-only view for a projector or big screen: the leaderboard, live games
+(who plays whom, who is to fire, shot count) and the latest results.
+Reconnects automatically if the server restarts. Quit with `Ctrl+C`.
 
-## Protokoll
+## Protocol
 
-Ren text, ett radavslutat meddelande per rad, så det går att testa med `nc`.
-Klient till server: `HELLO <plats|0> <klient-id>`, `NAME <namn>`,
-`FLEET r,c,h;...`, `FIRE r c [målplats]`, `BYE`; projektorvyn skickar `WATCH <id>`.
-Server till klient: `WELCOME`, `NAMEOK`, `OPPNAME`, `LOBBY`, `MATCH`/`MATCH3`,
-`FLEETOK`, `START`, `TURN`, `SHOT`, `INCOMING`, `OSHOT`, `OUT`, `GAMEOVER`, `OPPLEFT`,
-`ABORT`, `RESTART`, `LBCLEAR`, `LB <v> <f> <namn>`, `OPPWAIT`, `OPPBACK`,
-`RESUME`/`RESUME3`/`MYFLEET`/`MYSHOTS`/`ENEMYSHOTS`/`ENEMYSUNK` (återupptagen match),
-`MCLEAR`/`M`/`MEND`/`EV` (projektorvy), `ERR`.
-Servern äger allt speltillstånd och validerar varje drag; en klient får aldrig
-motståndarens skeppspositioner.
+Plain text, one newline-terminated message per line, so it can be tested with
+`nc`. Client to server: `HELLO <seat|0> <client id>`, `NAME <name>`,
+`FLEET r,c,h;...`, `FIRE r c [target seat]`, `BYE`; the projector view sends `WATCH <id>`.
+Server to client: `WELCOME`, `NAMEOK`, `OPPNAME`, `LOBBY`, `MATCH`/`MATCH3`, `FLEETOK`,
+`START`, `TURN`, `SHOT`, `INCOMING`, `OSHOT`, `OUT`, `GAMEOVER`, `OPPLEFT`, `ABORT`,
+`RESTART`, `LBCLEAR`, `LB <w> <l> <name>`, `OPPWAIT`, `OPPBACK`,
+`RESUME`/`RESUME3`/`MYFLEET`/`MYSHOTS`/`ENEMYSHOTS`/`ENEMYSUNK` (resumed game),
+`MCLEAR`/`M`/`MEND`/`EV` (projector view), `ERR`.
+The server owns all game state and validates every move; a client never
+receives the opponent's ship positions.
